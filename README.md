@@ -8,11 +8,11 @@ Follow these steps to download and set up the tool:
    cd O_tps
    ```
 
-2.** Enable the virtual environment with**
-   ```bash
+2. ** Enable the virtual environment with**
+    ```bash
    python -m venv venv
    source venv/bin/activate
-   ```
+    ```
    
 3. **Install required libraries**:
    Run the following command to install all dependencies.
