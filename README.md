@@ -9,8 +9,10 @@ Follow these steps to download and set up the tool:
    ```
 
 2.** Enable the virtual environment with**
-   '''python -m venv venv
-   source venv/bin/activate'''
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   ```
    
 3. **Install required libraries**:
    Run the following command to install all dependencies.
