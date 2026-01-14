@@ -5,37 +5,102 @@ async def bajao(phone, client, out):
     name = "bajao"
     domain = "bajao.pk"
     frequent_rate_limit = False
-
-
+    
+    # Remove country code, keep last 10 digits
+    clean_phone = phone.replace('+92', '').replace('+91', '').replace(' ', '')[-10:]
+    # Add leading 0 if not present
+    if not clean_phone.startswith('0'):
+        clean_phone = '0' + clean_phone
+    
     headers = {
-        'X-Requested-With': 'XMLHttpRequest',
-        'User-Agent': random.choice(ua["browsers"]["chrome"]),   # core.py has "import random" and we imported core.py so we can use random.anyfunction, we are importing * for this 
+        'User-Agent': random.choice(ua["browsers"]["chrome"]),
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'Origin': 'https://bajao.pk',
-        'Referer': 'https://bajao.pk/linkAccount'
+        'Referer': 'https://bajao.pk/create',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
     }
-
-    # i deleted the accept headers and sec * headers because they are not needed and the headers above are enough to make the request legit
-
-
+    
+    # selOperator=5 might be for different carriers
+    # You can try different values: 1=Jazz, 2=Telenor, 3=Zong, 4=Ufone, 5=?
+    params = {
+        'siteid': '',
+        'selOperator': '5',
+    }
+    
     data = {
-        'uuid': f"{phone[-10:]}", 
+        'uuid': clean_phone,
     }
-
-    response = await client.post(
-            'https://bajao.pk/api/v2/login/generatePin',
-            headers=headers,
-            data=data
-        )
+    
     try:
-        response_data = response.json()
-        if response_data.get("msg") == "PIN has been sent via SMS to your phone number" or response_data.get("msg") == "success":  
-            out.append({"name": name, "domain": domain, "frequent_rate_limit": frequent_rate_limit, "rateLimit": False, "sent": True, "error": False})
+        response = await client.post(
+            'https://bajao.pk/api/v2/login/generatePinV2',
+            params=params,
+            headers=headers,
+            data=data,
+        )
+        
+        try:
+            response_data = response.json()
+        except:
+            response_data = {}
+        
+        response_text = response.text.lower()
+        
+        # Check for success
+        if (response_data.get('isSuccess') == True or 
+            'pin has been sent' in response_text or
+            'otp has been sent' in response_text or
+            'sms' in response_text and 'sent' in response_text or
+            response_data.get('respCode') == '00'):
+            out.append({
+                "name": name,
+                "domain": domain,
+                "frequent_rate_limit": frequent_rate_limit,
+                "rateLimit": False,
+                "sent": True,
+                "error": False
+            })
             return None
+        
+        # Check for rate limit
+        elif ('rate' in response_text or 
+              'limit' in response_text or 
+              'too many' in response_text or 
+              'wait' in response_text):
+            out.append({
+                "name": name,
+                "domain": domain,
+                "frequent_rate_limit": frequent_rate_limit,
+                "rateLimit": True,
+                "sent": False,
+                "error": False
+            })
+            return None
+        
+        # Unknown response
         else:
-            out.append({"name": name, "domain": domain, "frequent_rate_limit": frequent_rate_limit, "rateLimit": False, "sent": False, "error": False})
-            print(f"Error: Unexpected response data {response_data}")
+            out.append({
+                "name": name,
+                "domain": domain,
+                "frequent_rate_limit": frequent_rate_limit,
+                "rateLimit": False,
+                "sent": False,
+                "error": False
+            })
             return None
-
-    except Exception:
-        out.append({"name": name, "domain": domain, "frequent_rate_limit": frequent_rate_limit, "rateLimit": False, "sent": False, "error": True})
+            
+    except Exception as e:
+        out.append({
+            "name": name,
+            "domain": domain,
+            "frequent_rate_limit": frequent_rate_limit,
+            "rateLimit": False,
+            "sent": False,
+            "error": True
+        })
         return None
